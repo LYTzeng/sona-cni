@@ -14,9 +14,11 @@
 
 FROM centos/python-27-centos7:latest as builder
 ENV LD_LIBRARY_PATH=/opt/rh/python27/root/usr/lib64
+# ENV LD_LIBRARY_PATH=/opt/rh/rh-python35/root/usr/lib64/
 USER root
 
-RUN curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+# RUN curl "https://bootstrap.pypa.io/pip/get-pip.py" -o "get-pip.py"
+RUN curl "https://bootstrap.pypa.io/pip/2.7/get-pip.py" -o "get-pip.py"
 RUN python get-pip.py
 RUN yum install -y build-essential tk
 RUN wget https://github.com/upx/upx/releases/download/v3.95/upx-3.95-amd64_linux.tar.xz
@@ -31,10 +33,15 @@ ADD master-ip.py /opt/app-root/src
 ADD replace-master-ip.py /opt/app-root/src
 
 RUN pip install -r /requirements.txt && \
-    pip install pyinstaller
+# https://stackoverflow.com/questions/63342345/cant-install-pyinstaller-at-ubuntu
+    pip install pyinstaller==3.6
+
+RUN echo "3.3.1" > /opt/app-root/lib/python2.7/site-packages/importlib_resources/version.txt
+RUN awk 'BEGIN{print "from . import trees"}{print}' /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py \
+    > /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py
 
 RUN pyinstaller --onefile sona
-RUN pyinstaller --onefile config-external.py
+RUN pyinstaller --onefile config-external.py --hidden-import=importlib_resources.trees
 RUN pyinstaller --onefile master-ip.py
 RUN pyinstaller --onefile replace-master-ip.py
 
