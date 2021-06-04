@@ -18,12 +18,12 @@ import shlex
 import sys
 import time
 import json
-import pyroute2
+# import pyroute2
 import ConfigParser
 import socket
 import struct
 import netifaces
-from netaddr import *
+# from netaddr import *
 from kubernetes import client, config
 
 SONA_CONFIG_FILE = "/etc/sona/sona-cni.conf"

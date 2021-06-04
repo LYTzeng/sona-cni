@@ -46,4 +46,8 @@ mv "$TMP_CNI_CONF" /host/etc/cni/net.d/"${CNI_CONF_NAME}" || \
 
 echo "Created CNI config ${CNI_CONF_NAME}"
 
+# Create logfile at /var/log
+mkdir -p /var/log/sona/cni/
+touch /var/log/sona/cni/cni.log
+
 exit 0

@@ -41,7 +41,8 @@ RUN awk 'BEGIN{print "from . import trees"}{print}' /opt/app-root/lib/python2.7/
     > /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py
 
 RUN pyinstaller --onefile sona
-RUN pyinstaller --onefile config-external.py --hidden-import=importlib_resources.trees
+# RUN pyinstaller --onefile config-external.py --hidden-import=importlib_resources.trees
+RUN pyinstaller --onefile config-external.py
 RUN pyinstaller --onefile master-ip.py
 RUN pyinstaller --onefile replace-master-ip.py
 

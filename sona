@@ -30,6 +30,7 @@ import ipaddress
 from netaddr import *
 from random import randint
 from kubernetes import client, config
+import logging
 
 CNI_VERSION = "0.3.1"
 SUPPORTED_VERSIONS = [ "0.1.0", "0.2.0", "0.3.0", "0.3.1" ]
@@ -57,6 +58,10 @@ DEFAULT_TRANSIENT_LOCAL_CIDR = "172.11.0.0/16"
 DEFAULT_SERVICE_CIDR = "10.96.0.0/12"
 DEFAULT_FAKE_MAC = "fe:00:00:00:00:20"
 
+CNI_LOGFILE = "/var/log/sona/cni/cni.log"
+
+logging.basicConfig(filename=CNI_LOGFILE,level=logging.DEBUG)
+
 def call_popen(cmd):
     '''
     Executes a shell command.
@@ -67,6 +72,7 @@ def call_popen(cmd):
     child = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     output = child.communicate()
     if child.returncode:
+        logging.error("Fatal error executing %s" % (cmd))
         raise RuntimeError("Fatal error executing %s" % (cmd))
     if len(output) == 0 or output[0] is None:
         output = ""
@@ -179,6 +185,7 @@ def request(ep_type, endpoint, method, data):
     elif method == "delete":
         resp = session.delete(url, auth=(username, password))
     else:
+        logging.error("The given method is not supported.")
         print("The given method is not supported.")
         return None
 
@@ -275,6 +282,7 @@ def get_network_id():
         return socket.gethostname()
 
     except Exception as e:
+        logging.error("failure get network ID " + str(e))
         raise SonaCniException(102, "failure get network ID " + str(e))
 
 def get_dpid():
@@ -293,6 +301,7 @@ def get_dpid():
             return None
 
     except Exception as e:
+        logging.error("failure get DPID " + str(e))
         raise SonaCniException(105, "failure get DPID " + str(e))
 
 def get_gateway_ip():
@@ -350,6 +359,7 @@ def get_transient_cidr():
             return DEFAULT_TRANSIENT_CIDR
 
     except Exception as e:
+        logging.error("failure get transient CIDR " + str(e))
         raise SonaCniException(102, "failure get transient CIDR " + str(e))
 
 def get_transient_local_cidr():
@@ -366,6 +376,7 @@ def get_transient_local_cidr():
             return DEFAULT_TRANSIENT_LOCAL_CIDR
 
     except Exception as e:
+        logging.error("failure get transient local CIDR " + str(e))
         raise SonaException(102, "failure get transient local CIDR " + str(e))
 
 def get_service_cidr():
@@ -383,6 +394,7 @@ def get_service_cidr():
             return DEFAULT_SERVICE_CIDR
 
     except Exception as e:
+        logging.error("failure get service CIDR " + str(e))
         raise SonaCniException(102, "failure get service CIDR " + str(e))
 
 def get_external_interface():
@@ -400,6 +412,7 @@ def get_external_interface():
             return None
 
     except Exception as e:
+        logging.error("failure get external interface " + str(e))
         raise SonaCniException(102, "failure get external interface " + str(e))
 
 def get_external_bridge_ip():
@@ -425,6 +438,7 @@ def get_external_gateway_ip():
             return None
 
     except Exception as e:
+        logging.error("failure get external gateway IP " + str(e))
         raise SonaCniException(102, "failure get external gateway IP " + str(e))
 
 def get_mtu():
@@ -442,6 +456,7 @@ def get_mtu():
             return INSIDE_MTU
 
     except Exception as e:
+        logging.error("failure get MTU size " + str(e))
         raise SonaCniException(102, "failure get MTU size " + str(e))
 
 def allocate_ip(network_id):
@@ -459,6 +474,7 @@ def allocate_ip(network_id):
         allocated_ip = ipamJson["ipam"]["ipAddress"]
 
     except Exception as e:
+        logging.error("failure get allocated IP " + str(e))
         raise SonaCniException(106, "failure get allocated IP " + str(e))
 
     return allocated_ip
@@ -476,6 +492,7 @@ def release_ip(ip):
         request("networking", endpoint, "delete", None)
 
     except Exception as e:
+        logging.error("failure release IP " + str(e))
         raise SonaCniException(106, "failure release IP " + str(e))
 
 def is_interface_up(interface):
@@ -547,6 +564,7 @@ def activate_ex_intf():
             ovs_vsctl('add-port', EXT_BRIDGE, ex_intf)
 
     except Exception as e:
+        logging.error("failure activate external interface" + str(e))
         raise SonaException(108, "failure activate external interface " + str(e))
 
 def activate_gw_intf():
@@ -571,7 +589,7 @@ def activate_gw_intf():
             if bridge_iface.operstate == "DOWN":
                 bridge_iface.up()
 
-	with ipdb.interfaces[LOCAL_BRIDGE] as bridge_iface:
+        with ipdb.interfaces[LOCAL_BRIDGE] as bridge_iface:
             if bridge_iface.operstate == "DOWN":
                 bridge_iface.up()
 
@@ -582,7 +600,7 @@ def activate_gw_intf():
         global_found = False
         transient_found = False
         service_found = False
-	transient_local_found = False
+        transient_local_found = False
 
         for route in ipdb.routes:
             if route['dst'] == cidr:
@@ -608,10 +626,11 @@ def activate_gw_intf():
         if not service_found:
             ipdb.routes.add(dst=service_cidr, oif=ipdb.interfaces[INT_BRIDGE].index).commit()
 
-	if not transient_local_found:
+        if not transient_local_found:
             ipdb.routes.add(dst=transient_local_cidr, oif=ipdb.interfaces[LOCAL_BRIDGE].index).commit()
 
     except Exception as e:
+        logging.error("failure activate gateway interface " + str(e))
         raise SonaException(108, "failure activate gateway interface " + str(e))
 
 def setup_interface(container_id, cni_netns, cni_ifname,
@@ -632,6 +651,7 @@ def setup_interface(container_id, cni_netns, cni_ifname,
         if not os.path.exists("/var/run/netns"):
             os.makedirs("/var/run/netns")
     except Exception as e:
+        logging.error("failure in creation of netns directory" + str(e))
         raise SonaCniException(100, "failure in creation of netns directory")
 
     try:
@@ -657,6 +677,7 @@ def setup_interface(container_id, cni_netns, cni_ifname,
             veth_inside_iface.net_ns_fd = container_id
 
     except Exception as e:
+        logging.error("veth pair setup failure" + str(e))
         raise SonaCniException(100, "veth pair setup failure" + str(e))
 
     try:
@@ -680,6 +701,7 @@ def setup_interface(container_id, cni_netns, cni_ifname,
     except Exception as e:
         if veth_outside_idx:
             pyroute2.IPRoute().link('del', index=veth_outside_idx)
+        logging.error("container interface setup failure" + str(e))
         raise SonaCniException(100, "container interface setup failure" + str(e))
 
 def randomMAC():
@@ -736,6 +758,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         raise SonaCniException(106, "failure in plugging pod interface" + str(e))
 
     output = json.dumps({'ip_address': ip_address, 'mac_address': mac_address})
+    logging.info("CNI ADD " + output)
     print(output)
 
 def cni_del(container_id, cni_ifname):
@@ -771,6 +794,7 @@ def cni_del(container_id, cni_ifname):
 
     command = "rm -f /var/run/netns/%s" % container_id
     call_popen(shlex.split(command))
+    logging.info("CNI DEL " + container_id + cni_ifname)
 
 def cni_version():
     '''
