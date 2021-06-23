@@ -31,6 +31,9 @@ SONA_CONFIG_FILE_ENV = os.environ.get("SONA_CONFIG_FILE_PATH")
 EXTERNAL_GW_IP = "external.gateway.ip"
 EXTERNAL_INTF_NAME = "external.interface.name"
 EXTERNAL_BR_IP = "external.bridge.ip"
+# SONA Mod
+EXTERNAL_OVS_IP = "external.ovs.ip"
+EXTERNAL_OVS_INTF = "external.ovs.interface.name"
 
 def get_external_interface():
     '''
@@ -52,6 +55,27 @@ def get_external_interface():
 
     except Exception as e:
         raise SonaException(102, "failure get external interface " + str(e))
+
+def get_external_ovs_interface():
+    '''
+    Obtains the external OvS interface name.
+
+    :return     external OvS interface name
+    '''
+    try:
+        sona_config_file = SONA_CONFIG_FILE
+        if SONA_CONFIG_FILE_ENV is not None:
+            sona_config_file = SONA_CONFIG_FILE_ENV
+
+        cf = ConfigParser.ConfigParser()
+        cf.read(sona_config_file)
+        if cf.has_option("network", "external_ovs_interface") is True:
+            return cf.get("network", "external_ovs_interface")
+        else:
+            return None
+
+    except Exception as e:
+        raise SonaException(102, "failure get external OvS interface " + str(e))
 
 def get_external_bridge_ip():
     '''
@@ -83,6 +107,27 @@ def get_external_gateway_ip():
     except Exception as e:
         raise SonaException(102, "failure get external gateway IP " + str(e))
 
+def get_external_ovs_ip():
+    '''
+    Obtains the external OvS IP address.
+
+    :return    external OvS IP address
+    '''
+    try:
+        sona_config_file = SONA_CONFIG_FILE
+        if SONA_CONFIG_FILE_ENV is not None:
+            sona_config_file = SONA_CONFIG_FILE_ENV
+
+        cf = ConfigParser.ConfigParser()
+        cf.read(sona_config_file)
+        if cf.has_option("network", "external_ovs_ip") is True:
+            return cf.get("network", "external_ovs_ip")
+        else:
+            return None
+
+    except Exception as e:
+        raise SonaException(102, "failure get external OvS IP " + str(e))
+
 def is_interface_up(interface):
     '''
     Checks whether the given network interface is up or not.
@@ -105,6 +150,8 @@ def main():
     ex_gw_ip = get_external_gateway_ip()
     ex_br_ip = get_external_bridge_ip()
     ex_gw_intf = get_external_interface()
+    ex_ovs_ip = get_external_ovs_ip()
+    ex_ovs_intf = get_external_ovs_interface()
     hostname = socket.gethostname()
 
     # Configs can be set in Configuration class directly or using helper utility
@@ -121,6 +168,12 @@ def main():
 
         # add external bridge IP
         addAnnotationToNode(v1, hostname, EXTERNAL_BR_IP, ex_br_ip)
+
+        # [Mod] add external OvS IP
+        addAnnotationToNode(v1, hostname, EXTERNAL_OVS_IP, ex_ovs_ip)
+
+        # [Mod] add external OvS IP
+        addAnnotationToNode(v1, hostname, EXTERNAL_OVS_INTF, ex_ovs_intf)
 
 class SonaException(Exception):
 
