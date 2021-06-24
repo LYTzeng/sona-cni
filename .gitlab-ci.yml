@@ -6,6 +6,6 @@ build:
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build --network=host -t $CI_REGISTRY/oscar/sona-cni:original .
-    - docker push $CI_REGISTRY/oscar/sona-cni:latest
+    - docker push $CI_REGISTRY/oscar/sona-cni:original
   tags:
     - SONA
