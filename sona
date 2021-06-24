@@ -603,6 +603,8 @@ def activate_mgmt_vlan_intf():
     if MGMT_VLAN_INTF in intfs:
         return
 
+    ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
+
     try:
         ext_ovs_ip_address = ""
         ext_ovs_mac_address = ""
@@ -621,18 +623,12 @@ def activate_mgmt_vlan_intf():
         'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
 
         with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
-            for addr in mgmt_vlan_iface.ipaddr:
-                addr_str = '/'.join(map(str, addr))
-                mgmt_vlan_iface.del_ip(addr_str)
-
             mgmt_vlan_iface.add_ip(ext_ovs_ip_address)
             if mgmt_vlan_iface.operstate == "DOWN":
                 mgmt_vlan_iface.up()
 
             addr_config_str = 'other-config:hwaddr=\"' + ext_ovs_mac_address + '\"'
             ovs_vsctl('set', 'bridge', INT_BRIDGE, addr_config_str)
-            internal_config_str = 'type=internal'
-            ovs_vsctl('set', 'Interface', INT_BRIDGE, internal_config_str)
 
         if ext_ovs_intf not in intfs:
             ovs_vsctl('add-port', INT_BRIDGE, ext_ovs_intf)
