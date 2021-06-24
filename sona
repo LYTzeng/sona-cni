@@ -617,9 +617,8 @@ def activate_mgmt_vlan_intf():
                 addr_str = '/'.join(map(str, addr))
                 ext_ovs_iface.del_ip(addr_str)
 
-        mgmt_vlan_intf_options = 'tag=' + MGMT_VLAN + ' -- set Interface ' \
-        + MGMT_VLAN_INTF + ' type=internal mac=\"' + ext_ovs_mac_address + '\"'
-        ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, mgmt_vlan_intf_options)
+        ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
+        'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
 
         with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
             for addr in mgmt_vlan_iface.ipaddr:
