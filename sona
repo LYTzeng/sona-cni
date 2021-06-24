@@ -60,6 +60,9 @@ DEFAULT_FAKE_MAC = "fe:00:00:00:00:20"
 
 CNI_LOGFILE = "/var/log/sona/cni/cni.log"
 
+MGMT_VLAN_INTF = "kbr-int-mgmt"
+MGMT_VLAN = "10"
+
 logging.basicConfig(filename=CNI_LOGFILE,level=logging.DEBUG)
 
 def call_popen(cmd):
@@ -441,6 +444,24 @@ def get_external_gateway_ip():
         logging.error("failure get external gateway IP " + str(e))
         raise SonaCniException(102, "failure get external gateway IP " + str(e))
 
+def get_external_ovs_interface():
+    '''
+    Obtains the external OvS interface name.
+
+    :return     external OvS interface name
+    '''
+    try:
+        cf = ConfigParser.ConfigParser()
+        cf.read(SONA_CONFIG_FILE)
+        if cf.has_option("network", "external_ovs_interface") is True:
+            return cf.get("network", "external_ovs_interface")
+        else:
+            return None
+
+    except Exception as e:
+        logging.error("failure get external OvS interface " + str(e))
+        raise SonaCniException(102, "failure get external OvS interface " + str(e))
+
 def get_mtu():
     '''
     Obtains the default MTU size of all container and bridge interfaces.
@@ -536,7 +557,6 @@ def activate_ex_intf():
     try:
         ext_ip_address = "127.0.0.1/24"
         ext_mac_address = "02:11:22:33:44:55"
-        empty_ip_address = "0.0.0.0"
         with ipdb.interfaces[ex_intf] as ext_iface:
             ipv4_addr = ext_iface.ipaddr.ipv4
             if not ipv4_addr:
@@ -566,6 +586,62 @@ def activate_ex_intf():
     except Exception as e:
         logging.error("failure activate external interface" + str(e))
         raise SonaException(108, "failure activate external interface " + str(e))
+
+def activate_mgmt_vlan_intf():
+    ipdb = pyroute2.IPDB(mode='explicit')
+    ext_ovs_intf = get_external_ovs_interface()
+
+    if ext_ovs_intf is None:
+        return
+    
+    if has_interface(ext_ovs_intf) is False:
+        return
+
+    intfs = ovs_vsctl('list-ifaces', INT_BRIDGE)
+    if ext_ovs_intf in intfs:
+        return
+    if MGMT_VLAN_INTF in intfs:
+        return
+
+    try:
+        ext_ovs_ip_address = ""
+        ext_ovs_mac_address = ""
+        with ipdb.interfaces[ext_ovs_intf] as ext_ovs_iface:
+            ipv4_addr = ext_ovs_iface.ipaddr.ipv4
+            if not ipv4_addr:
+                print "External OvS interface does not have any IP address"
+                return
+            ext_ovs_ip_address = ipv4_addr[0]["address"] + '/' + str(ipv4_addr[0]["prefixlen"])
+            ext_ovs_mac_address = ext_ovs_iface.address
+            for addr in ext_ovs_iface.ipaddr:
+                addr_str = '/'.join(map(str, addr))
+                ext_ovs_iface.del_ip(addr_str)
+
+        if has_interface(MGMT_VLAN_INTF) is False:
+            mgmt_vlan_intf_options = 'tag=' + MGMT_VLAN + ' -- set Interface ' \
+            + MGMT_VLAN_INTF + ' type=internal mac=\"' + ext_ovs_mac_address + '\"'
+            ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, mgmt_vlan_intf_options)
+
+        with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
+            for addr in mgmt_vlan_iface.ipaddr:
+                addr_str = '/'.join(map(str, addr))
+                mgmt_vlan_iface.del_ip(addr_str)
+
+            mgmt_vlan_iface.add_ip(ext_ovs_ip_address)
+            if mgmt_vlan_iface.operstate == "DOWN":
+                mgmt_vlan_iface.up()
+
+            addr_config_str = 'other-config:hwaddr=\"' + ext_ovs_mac_address + '\"'
+            ovs_vsctl('set', 'bridge', INT_BRIDGE, addr_config_str)
+            internal_config_str = 'type=internal'
+            ovs_vsctl('set', 'Interface', INT_BRIDGE, internal_config_str)
+
+        if ext_ovs_intf not in intfs:
+            ovs_vsctl('add-port', INT_BRIDGE, ext_ovs_intf)
+
+    except Exception as e:
+        logging.error("failure activate Mgmt VLAN interface" + str(e))
+        raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
 
 def activate_gw_intf():
     '''
@@ -733,6 +809,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if is_on_boarded_state() is True:
         activate_gw_intf()
         activate_ex_intf()
+        activate_mgmt_vlan_intf()
         update_post_on_board_state()
         update_ovs_bridge_mtu()
 
