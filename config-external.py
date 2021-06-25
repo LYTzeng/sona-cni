@@ -18,7 +18,7 @@ import shlex
 import sys
 import time
 import json
-# import pyroute2
+import pyroute2
 import ConfigParser
 import socket
 import struct
@@ -34,6 +34,7 @@ EXTERNAL_BR_IP = "external.bridge.ip"
 # SONA Mod
 EXTERNAL_OVS_IP = "external.ovs.ip"
 EXTERNAL_OVS_INTF = "external.ovs.interface.name"
+MGMT_INTF_IP = "management.interface.ip"
 
 def get_external_interface():
     '''
@@ -76,6 +77,43 @@ def get_external_ovs_interface():
 
     except Exception as e:
         raise SonaException(102, "failure get external OvS interface " + str(e))
+
+def get_management_interface():
+    '''
+    Obtains the management interface name. (For OvSDB and ONOS to OvS connectivity)
+
+    :return     management interface name
+    '''
+    try:
+        sona_config_file = SONA_CONFIG_FILE
+        if SONA_CONFIG_FILE_ENV is not None:
+            sona_config_file = SONA_CONFIG_FILE_ENV
+
+        cf = ConfigParser.ConfigParser()
+        cf.read(sona_config_file)
+        if cf.has_option("network", "management_interace") is True:
+            return cf.get("network", "management_interace")
+        else:
+            return None
+
+    except Exception as e:
+        raise SonaException(102, "failure get management interface " + str(e))
+
+def get_management_interface_ip():
+    '''
+    Get interface IP address of management interface on current node.
+
+    :return management int IP address
+    '''
+    try:
+        ipdb = pyroute2.IPDB(mode='explicit')
+        mgmt_int_name = get_management_interface()
+        addr = ipdb.interfaces[mgmt_int_name].ipaddr[0]
+        mgmt_int_ip = addr[0] # Get first element of tuple, https://docs.pyroute2.org/ipdb.html#ip-address-management
+        return mgmt_int_ip
+
+    except Exception as e:
+        raise SonaException(102, "failure get management interface ip " + str(e))
 
 def get_external_bridge_ip():
     '''
@@ -153,6 +191,7 @@ def main():
     ex_ovs_ip = get_external_ovs_ip()
     ex_ovs_intf = get_external_ovs_interface()
     hostname = socket.gethostname()
+    management_ip = get_management_interface_ip()
 
     # Configs can be set in Configuration class directly or using helper utility
     config.load_kube_config()
@@ -174,6 +213,9 @@ def main():
 
         # [Mod] add external OvS IP
         addAnnotationToNode(v1, hostname, EXTERNAL_OVS_INTF, ex_ovs_intf)
+
+        # [Mod] add management IP
+        addAnnotationToNode(v1, hostname, MGMT_INTF_IP, management_ip)
 
 class SonaException(Exception):
 
