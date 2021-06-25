@@ -614,7 +614,7 @@ def activate_mgmt_vlan_intf():
 
     except Exception as e:
         logging.error("fail to add Mgmt VLAN interface to kbr-int: " + str(e))
-        logger.exception(e)
+        logging.exception(e)
         raise SonaException(108, "fail to add Mgmt VLAN interface to kbr-int " + str(e))
 
     try:
@@ -645,7 +645,7 @@ def activate_mgmt_vlan_intf():
 
     except Exception as e:
         logging.error("failure activate Mgmt VLAN interface: " + str(e))
-        logger.exception(e)
+        logging.exception(e)
         # raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
 
 def activate_gw_intf():
@@ -712,7 +712,7 @@ def activate_gw_intf():
 
     except Exception as e:
         logging.error("failure activate gateway interface " + str(e))
-        logger.exception(e)
+        logging.exception(e)
         raise SonaException(108, "failure activate gateway interface " + str(e))
 
 def setup_interface(container_id, cni_netns, cni_ifname,
