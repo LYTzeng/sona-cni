@@ -64,7 +64,7 @@ CNI_LOGFILE = "/var/log/sona/cni/cni.log"
 MGMT_VLAN_INTF = "kbr-int-mgmt"
 MGMT_VLAN = "10"
 
-logging.basicConfig(filename=CNI_LOGFILE,level=logging.DEBUG)
+logging.basicConfig(filename=CNI_LOGFILE,level=logging.INFO)
 
 def call_popen(cmd):
     '''
@@ -600,25 +600,17 @@ def activate_mgmt_vlan_intf():
     intfs = ovs_vsctl('list-ifaces', INT_BRIDGE)
     if ext_ovs_intf in intfs:
         return
-    if MGMT_VLAN_INTF in intfs:
-        return
 
     # ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
 
     ext_ovs_ip_address = ""
     ext_ovs_mac_address = ""
 
-    try:
-        ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
-        'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
+    ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
+    'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
 
-    except Exception as e:
-        logging.error("fail to add Mgmt VLAN interface to kbr-int: " + str(e))
-        logging.exception(e)
-        # raise SonaException(108, "fail to add Mgmt VLAN interface to kbr-int " + str(e))
-
+    ipdb = pyroute2.IPDB(mode='explicit')
     try:
-        ipdb = pyroute2.IPDB(mode='explicit')
         with ipdb.interfaces[ext_ovs_intf] as ext_ovs_iface:
             ipv4_addr = ext_ovs_iface.ipaddr.ipv4
             if not ipv4_addr:
@@ -812,9 +804,9 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         return
 
     if is_on_boarded_state() is True:
-        activate_mgmt_vlan_intf()
         activate_gw_intf()
         activate_ex_intf()
+        activate_mgmt_vlan_intf()
         update_post_on_board_state()
         update_ovs_bridge_mtu()
 
