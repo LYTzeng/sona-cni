@@ -601,15 +601,22 @@ def activate_mgmt_vlan_intf():
     if ext_ovs_intf in intfs:
         return
 
-    # ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
+    ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
 
     ext_ovs_ip_address = ""
     ext_ovs_mac_address = ""
 
+    ipdb = pyroute2.IPDB(mode='explicit')
+    try:
+        ext_ovs_mac_address = ipdb.interfaces[ext_ovs_intf].address
+    except Exception as e:
+        logging.error("failed to get external OvS interface MAC address: " + str(e))
+        logging.exception(e)
+
     ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
     'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
 
-    ipdb = pyroute2.IPDB(mode='explicit')
+    ipdb = pyroute2.IPDB(mode='explicit') # Get latest IPDB
     try:
         with ipdb.interfaces[ext_ovs_intf] as ext_ovs_iface:
             ipv4_addr = ext_ovs_iface.ipaddr.ipv4
