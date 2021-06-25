@@ -109,8 +109,7 @@ def get_management_interface_ip():
     try:
         ipdb = pyroute2.IPDB(mode='explicit')
         mgmt_int_name = get_management_interface()
-        addr = ipdb.interfaces[mgmt_int_name].ipaddr[0]
-        mgmt_int_ip = addr[0] # Get first element of tuple, https://docs.pyroute2.org/ipdb.html#ip-address-management
+        mgmt_int_ip = ipdb.interfaces[mgmt_int_name].ipaddr.ipv4[0]["address"]
         return mgmt_int_ip
 
     except Exception as e:
