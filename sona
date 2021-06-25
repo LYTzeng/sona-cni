@@ -603,7 +603,7 @@ def activate_mgmt_vlan_intf():
     if MGMT_VLAN_INTF in intfs:
         return
 
-    ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
+    # ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
 
     ext_ovs_ip_address = ""
     ext_ovs_mac_address = ""
