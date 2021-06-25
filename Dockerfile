@@ -25,6 +25,7 @@ RUN wget https://github.com/upx/upx/releases/download/v3.95/upx-3.95-amd64_linux
 RUN tar xvf upx-3.95-amd64_linux.tar.xz -C ./
 RUN cp upx-3.95-amd64_linux/upx /bin
 
+ADD requirements.txt /
 
 RUN pip install -r /requirements.txt && \
 # https://stackoverflow.com/questions/63342345/cant-install-pyinstaller-at-ubuntu
@@ -35,7 +36,6 @@ RUN awk 'BEGIN{print "from . import trees"}{print}' /opt/app-root/lib/python2.7/
     > /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py
 
 RUN mkdir -p /opt/app-root/src
-ADD requirements.txt /
 ADD sona /opt/app-root/src
 ADD config-external.py /opt/app-root/src
 ADD master-ip.py /opt/app-root/src
