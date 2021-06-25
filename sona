@@ -605,9 +605,10 @@ def activate_mgmt_vlan_intf():
 
     ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
 
+    ext_ovs_ip_address = ""
+    ext_ovs_mac_address = ""
+
     try:
-        ext_ovs_ip_address = ""
-        ext_ovs_mac_address = ""
         with ipdb.interfaces[ext_ovs_intf] as ext_ovs_iface:
             ipv4_addr = ext_ovs_iface.ipaddr.ipv4
             if not ipv4_addr:
@@ -622,6 +623,11 @@ def activate_mgmt_vlan_intf():
         ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
         'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
 
+    except Exception as e:
+        logging.error("failure activate Mgmt VLAN interface" + str(e))
+        # raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
+
+    try:
         with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
             mgmt_vlan_iface.add_ip(ext_ovs_ip_address)
             if mgmt_vlan_iface.operstate == "DOWN":
