@@ -588,7 +588,6 @@ def activate_ex_intf():
         raise SonaException(108, "failure activate external interface " + str(e))
 
 def activate_mgmt_vlan_intf():
-    ipdb = pyroute2.IPDB(mode='explicit')
     ext_ovs_intf = get_external_ovs_interface()
 
     if ext_ovs_intf is None:
@@ -609,6 +608,20 @@ def activate_mgmt_vlan_intf():
     ext_ovs_mac_address = ""
 
     try:
+        ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
+        'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
+
+    except Exception as e:
+        logging.error("fail to add Mgmt VLAN interface to kbr-int: " + str(e))
+        raise SonaException(108, "fail to add Mgmt VLAN interface to kbr-int " + str(e))
+
+    try:
+        ipdb = pyroute2.IPDB(mode='explicit')
+        with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
+            mgmt_vlan_iface.add_ip(ext_ovs_ip_address)
+            if mgmt_vlan_iface.operstate == "DOWN":
+                mgmt_vlan_iface.up()
+
         with ipdb.interfaces[ext_ovs_intf] as ext_ovs_iface:
             ipv4_addr = ext_ovs_iface.ipaddr.ipv4
             if not ipv4_addr:
@@ -620,28 +633,16 @@ def activate_mgmt_vlan_intf():
                 addr_str = '/'.join(map(str, addr))
                 ext_ovs_iface.del_ip(addr_str)
 
-        ovs_vsctl('add-port', INT_BRIDGE, MGMT_VLAN_INTF, 'tag=' + MGMT_VLAN, '--',
-        'set', 'Interface', MGMT_VLAN_INTF, 'type=internal', 'mac=\"' + ext_ovs_mac_address + '\"')
-
-    except Exception as e:
-        logging.error("failure adding Mgmt VLAN interface to kbr-int" + str(e))
-        # raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
-
-    try:
-        ipdb = pyroute2.IPDB(mode='explicit')
-        with ipdb.interfaces[MGMT_VLAN_INTF] as mgmt_vlan_iface:
-            mgmt_vlan_iface.add_ip(ext_ovs_ip_address)
-            if mgmt_vlan_iface.operstate == "DOWN":
-                mgmt_vlan_iface.up()
 
             addr_config_str = 'other-config:hwaddr=\"' + ext_ovs_mac_address + '\"'
             ovs_vsctl('set', 'bridge', INT_BRIDGE, addr_config_str)
 
+        intfs = ovs_vsctl('list-ifaces', INT_BRIDGE)
         if ext_ovs_intf not in intfs:
             ovs_vsctl('add-port', INT_BRIDGE, ext_ovs_intf)
 
     except Exception as e:
-        logging.error("failure activate Mgmt VLAN interface" + str(e))
+        logging.error("failure activate Mgmt VLAN interface: " + str(e))
         raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
 
 def activate_gw_intf():
@@ -808,9 +809,9 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
         return
 
     if is_on_boarded_state() is True:
+        activate_mgmt_vlan_intf()
         activate_gw_intf()
         activate_ex_intf()
-        activate_mgmt_vlan_intf()
         update_post_on_board_state()
         update_ovs_bridge_mtu()
 
