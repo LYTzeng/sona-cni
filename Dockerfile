@@ -25,12 +25,6 @@ RUN wget https://github.com/upx/upx/releases/download/v3.95/upx-3.95-amd64_linux
 RUN tar xvf upx-3.95-amd64_linux.tar.xz -C ./
 RUN cp upx-3.95-amd64_linux/upx /bin
 
-RUN mkdir -p /opt/app-root/src
-ADD requirements.txt /
-ADD sona /opt/app-root/src
-ADD config-external.py /opt/app-root/src
-ADD master-ip.py /opt/app-root/src
-ADD replace-master-ip.py /opt/app-root/src
 
 RUN pip install -r /requirements.txt && \
 # https://stackoverflow.com/questions/63342345/cant-install-pyinstaller-at-ubuntu
@@ -39,6 +33,13 @@ RUN pip install -r /requirements.txt && \
 RUN echo "3.3.1" > /opt/app-root/lib/python2.7/site-packages/importlib_resources/version.txt
 RUN awk 'BEGIN{print "from . import trees"}{print}' /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py \
     > /opt/app-root/lib/python2.7/site-packages/importlib_resources/__init__.py
+
+RUN mkdir -p /opt/app-root/src
+ADD requirements.txt /
+ADD sona /opt/app-root/src
+ADD config-external.py /opt/app-root/src
+ADD master-ip.py /opt/app-root/src
+ADD replace-master-ip.py /opt/app-root/src
 
 RUN pyinstaller --onefile sona
 # RUN pyinstaller --onefile config-external.py --hidden-import=importlib_resources.trees
