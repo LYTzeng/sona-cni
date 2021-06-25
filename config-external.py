@@ -16,6 +16,7 @@
 import os
 import shlex
 import sys
+import traceback
 import time
 import json
 import pyroute2
@@ -105,15 +106,16 @@ def get_management_interface_ip():
 
     :return management int IP address
     '''
-    # try:
-    ipdb = pyroute2.IPDB(mode='explicit')
-    mgmt_int_name = get_management_interface()
-    addr = ipdb.interfaces[mgmt_int_name].ipaddr[0]
-    mgmt_int_ip = addr[0] # Get first element of tuple, https://docs.pyroute2.org/ipdb.html#ip-address-management
-    return mgmt_int_ip
+    try:
+        ipdb = pyroute2.IPDB(mode='explicit')
+        mgmt_int_name = get_management_interface()
+        addr = ipdb.interfaces[mgmt_int_name].ipaddr[0]
+        mgmt_int_ip = addr[0] # Get first element of tuple, https://docs.pyroute2.org/ipdb.html#ip-address-management
+        return mgmt_int_ip
 
-    # except Exception as e:
-    #     raise SonaException(102, "failure get management interface ip " + str(e))
+    except Exception as e:
+        print(traceback.format_exc())
+        raise SonaException(102, "failure get management interface ip " + str(e))
 
 def get_external_bridge_ip():
     '''
