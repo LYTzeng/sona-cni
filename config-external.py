@@ -36,6 +36,7 @@ EXTERNAL_BR_IP = "external.bridge.ip"
 EXTERNAL_OVS_IP = "external.ovs.ip"
 EXTERNAL_OVS_INTF = "external.ovs.interface.name"
 MGMT_INTF_IP = "management.interface.ip"
+ONOS_IP = "controller.ip"
 
 def get_external_interface():
     '''
@@ -167,6 +168,27 @@ def get_external_ovs_ip():
     except Exception as e:
         raise SonaException(102, "failure get external OvS IP " + str(e))
 
+def get_controller_ip():
+    '''
+    Obtains the ONOS controller IP address.
+
+    :return    ONOS controller IP address
+    '''
+    try:
+        sona_config_file = SONA_CONFIG_FILE
+        if SONA_CONFIG_FILE_ENV is not None:
+            sona_config_file = SONA_CONFIG_FILE_ENV
+
+        cf = ConfigParser.ConfigParser()
+        cf.read(sona_config_file)
+        if cf.has_option("network", "controller_ip") is True:
+            return cf.get("network", "controller_ip")
+        else:
+            return None
+
+    except Exception as e:
+        raise SonaException(102, "failure get external OvS IP " + str(e))
+
 def is_interface_up(interface):
     '''
     Checks whether the given network interface is up or not.
@@ -193,6 +215,7 @@ def main():
     ex_ovs_intf = get_external_ovs_interface()
     hostname = socket.gethostname()
     management_ip = get_management_interface_ip()
+    onos_ip = get_controller_ip()
 
     # Configs can be set in Configuration class directly or using helper utility
     config.load_kube_config()
@@ -217,6 +240,9 @@ def main():
 
         # [Mod] add management IP
         addAnnotationToNode(v1, hostname, MGMT_INTF_IP, management_ip)
+
+        # [Mod] add ONOS IP
+        addAnnotationToNode(v1, hostname, ONOS_IP, onos_ip)
 
 class SonaException(Exception):
 
