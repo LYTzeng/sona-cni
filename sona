@@ -803,8 +803,8 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if is_on_boarded_state() is True:
         activate_gw_intf()
         activate_ex_intf()
-        activate_mgmt_vlan_intf()
         update_post_on_board_state()
+        activate_mgmt_vlan_intf()
         update_ovs_bridge_mtu()
 
     ip_address = allocate_ip(get_network_id())
