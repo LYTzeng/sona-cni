@@ -113,27 +113,43 @@ def ovs_ofctl(*args):
     '''
     return call_prog("ovs-ofctl", list(args))
 
-def master_ip():
+def get_controller_ip():
     '''
-    A helper method to retrieve Kubernetes master IP address.
+    Obtains the ONOS controller IP address.
 
-    :return    Kubernetes master IP address
+    :return    ONOS controller IP address
     '''
-    config.load_kube_config()
 
-    api_instance = client.CoreV1Api()
+    sona_config_file = SONA_CONFIG_FILE
 
-    master_str = "node-role.kubernetes.io/master"
+    cf = ConfigParser.ConfigParser()
+    cf.read(sona_config_file)
+    if cf.has_option("network", "controller_ip") is True:
+        return cf.get("network", "controller_ip")
+    else:
+        return None
 
-    node_list = api_instance.list_node()
+# def master_ip():
+#     '''
+#     A helper method to retrieve Kubernetes master IP address.
 
-    for node in node_list.items:
-        node_labels = node.metadata.labels
-        for labels in node_labels:
-            # TODO: need to check whether the given master node has SONA POD
-            if master_str in labels:
-                return get_node_address(node)
-    return None
+#     :return    Kubernetes master IP address
+#     '''
+#     config.load_kube_config()
+
+#     api_instance = client.CoreV1Api()
+
+#     master_str = "node-role.kubernetes.io/master"
+
+#     node_list = api_instance.list_node()
+
+#     for node in node_list.items:
+#         node_labels = node.metadata.labels
+#         for labels in node_labels:
+#             # TODO: need to check whether the given master node has SONA POD
+#             if master_str in labels:
+#                 return get_node_address(node)
+#     return None
 
 def get_node_address(node):
     '''
@@ -167,7 +183,7 @@ def request(ep_type, endpoint, method, data):
     else:
         path = ONOS_K8S_NODE_PATH
 
-    url = "http://" + master_ip() + ":" + ONOS_PORT_NUM + "/" + path
+    url = "http://" + get_controller_ip() + ":" + ONOS_PORT_NUM + "/" + path
     url = url + "/" + endpoint
 
     username = ONOS_USERNAME
@@ -803,8 +819,8 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if is_on_boarded_state() is True:
         activate_gw_intf()
         activate_ex_intf()
-        update_post_on_board_state()
         activate_mgmt_vlan_intf()
+        update_post_on_board_state()
         update_ovs_bridge_mtu()
 
     ip_address = allocate_ip(get_network_id())
