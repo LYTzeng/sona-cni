@@ -823,7 +823,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if is_on_boarded_state() is True:
         activate_gw_intf()
         activate_ex_intf()
-        activate_mgmt_vlan_intf()
+        # activate_mgmt_vlan_intf()
         update_post_on_board_state()
         update_ovs_bridge_mtu()
 
@@ -896,6 +896,8 @@ def cni_version():
     print(json.dumps(json_data))
 
 def main():
+    if is_on_boarded_state() is True:
+        activate_mgmt_vlan_intf()
     try:
         cni_command = os.environ['CNI_COMMAND']
 
