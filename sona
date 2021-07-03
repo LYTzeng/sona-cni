@@ -32,6 +32,7 @@ from random import randint
 from kubernetes import client, config
 import logging
 import traceback
+from time import sleep
 
 CNI_VERSION = "0.3.1"
 SUPPORTED_VERSIONS = [ "0.1.0", "0.2.0", "0.3.0", "0.3.1" ]
@@ -397,7 +398,7 @@ def get_transient_local_cidr():
 
     except Exception as e:
         logging.error("failure get transient local CIDR " + str(e))
-        raise SonaException(102, "failure get transient local CIDR " + str(e))
+        raise SonaCniException(102, "failure get transient local CIDR " + str(e))
 
 def get_service_cidr():
     '''
@@ -602,16 +603,19 @@ def activate_ex_intf():
 
     except Exception as e:
         logging.error("failure activate external interface" + str(e))
-        raise SonaException(108, "failure activate external interface " + str(e))
+        raise SonaCniException(108, "failure activate external interface " + str(e))
 
 def activate_mgmt_vlan_intf():
+    hostname = socket.gethostname()
+    if hostname == "master":
+        sleep(120) # Sleep if node is master to wait for worker nodes to finish configuring
     ext_ovs_intf = get_external_ovs_interface()
 
     if ext_ovs_intf is None:
-        raise SonaException(108, "failure getting ext ovs interface: " + str(e))
+        raise SonaCniException(108, "failure getting ext ovs interface: " + str(e))
     
     if has_interface(ext_ovs_intf) is False:
-        raise SonaException(108, "failure getting ext ovs interface: " + str(e))
+        raise SonaCniException(108, "failure getting ext ovs interface: " + str(e))
 
     intfs = ovs_vsctl('list-ifaces', INT_BRIDGE)
     if ext_ovs_intf in intfs:
@@ -636,7 +640,7 @@ def activate_mgmt_vlan_intf():
             ipv4_addr = ext_ovs_iface.ipaddr.ipv4
             if not ipv4_addr:
                 logging.error("External OvS interface does not have any IP address")
-                raise SonaException(108, "External OvS interface does not have any IP address")
+                raise SonaCniException(108, "External OvS interface does not have any IP address")
             ext_ovs_ip_address = ipv4_addr[0]["address"] + '/' + str(ipv4_addr[0]["prefixlen"])
             for addr in ext_ovs_iface.ipaddr:
                 addr_str = '/'.join(map(str, addr))
@@ -650,7 +654,7 @@ def activate_mgmt_vlan_intf():
     except Exception as e:
         logging.error("failure adding ext ovs interface to kbr-int: " + str(e))
         logging.exception(e)
-        # raise SonaException(108, "failure activate Mgmt VLAN interface " + str(e))
+        # raise SonaCniException(108, "failure activate Mgmt VLAN interface " + str(e))
 
 def activate_gw_intf():
     '''
@@ -717,7 +721,7 @@ def activate_gw_intf():
     except Exception as e:
         logging.error("failure activate gateway interface " + str(e))
         logging.exception(e)
-        raise SonaException(108, "failure activate gateway interface " + str(e))
+        raise SonaCniException(108, "failure activate gateway interface " + str(e))
 
 def setup_interface(container_id, cni_netns, cni_ifname,
                     mac_address, ip_address):
