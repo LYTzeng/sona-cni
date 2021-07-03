@@ -606,20 +606,21 @@ def activate_ex_intf():
         raise SonaCniException(108, "failure activate external interface " + str(e))
 
 def activate_mgmt_vlan_intf():
-    hostname = socket.gethostname()
-    if hostname == "master":
-        sleep(120) # Sleep if node is master to wait for worker nodes to finish configuring
     ext_ovs_intf = get_external_ovs_interface()
 
     if ext_ovs_intf is None:
-        raise SonaCniException(108, "failure getting ext ovs interface: " + str(e))
+        raise SonaCniException(108, "failure getting ext ovs interface from config file\n" + str(e))
     
     if has_interface(ext_ovs_intf) is False:
-        raise SonaCniException(108, "failure getting ext ovs interface: " + str(e))
+        raise SonaCniException(108, "failure getting ext ovs interface " + ext_ovs_intf + "\n" + str(e))
 
     intfs = ovs_vsctl('list-ifaces', INT_BRIDGE)
-    if ext_ovs_intf in intfs:
+    if MGMT_VLAN_INTF in intfs:
         return
+
+    hostname = socket.gethostname()
+    if hostname == "master":
+        sleep(120) # Sleep if node is master to wait for worker nodes to finish configuring
 
     ovs_vsctl('set', 'Interface', INT_BRIDGE, 'type=internal')
 
@@ -823,7 +824,7 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     if is_on_boarded_state() is True:
         activate_gw_intf()
         activate_ex_intf()
-        # activate_mgmt_vlan_intf()
+        activate_mgmt_vlan_intf()
         update_post_on_board_state()
         update_ovs_bridge_mtu()
 
@@ -896,8 +897,6 @@ def cni_version():
     print(json.dumps(json_data))
 
 def main():
-    if is_on_boarded_state() is True:
-        activate_mgmt_vlan_intf()
     try:
         cni_command = os.environ['CNI_COMMAND']
 
