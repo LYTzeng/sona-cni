@@ -821,12 +821,12 @@ def cni_add(cni_ifname, cni_netns, namespace, pod_name, container_id):
     # if has_network() is False:
     #     return
 
-    if is_on_boarded_state() is True:
-        activate_gw_intf()
-        activate_ex_intf()
-        # activate_mgmt_vlan_intf()
-        update_post_on_board_state()
-        update_ovs_bridge_mtu()
+    # if is_on_boarded_state() is True:
+    #     activate_gw_intf()
+    #     activate_ex_intf()
+    #     activate_mgmt_vlan_intf()
+    #     update_post_on_board_state()
+    #     update_ovs_bridge_mtu()
 
     ip_address = allocate_ip(get_network_id())
     local_cidr = get_cidr()
@@ -950,7 +950,11 @@ class SonaCniException(Exception):
 if __name__ == '__main__':
     try:
         if is_on_boarded_state() is True:
+            activate_gw_intf()
+            activate_ex_intf()
             activate_mgmt_vlan_intf()
+            update_post_on_board_state()
+            update_ovs_bridge_mtu()
         main()
     except SonaCniException as e:
         print(e.cni_error())
