@@ -209,8 +209,8 @@ def addAnnotationToNode(api_instance, node_name, annot_key, annot_value):
 def main():
 
     ex_gw_ip = get_external_gateway_ip()
-    ex_br_ip = get_external_bridge_ip()
-    ex_gw_intf = get_external_interface()
+    # ex_br_ip = get_external_bridge_ip()
+    # ex_gw_intf = get_external_interface()
     ex_ovs_ip = get_external_ovs_ip()
     ex_ovs_intf = get_external_ovs_interface()
     hostname = socket.gethostname()
@@ -227,10 +227,10 @@ def main():
         addAnnotationToNode(v1, hostname, EXTERNAL_GW_IP, ex_gw_ip)
 
         # add external interface name
-        addAnnotationToNode(v1, hostname, EXTERNAL_INTF_NAME, ex_gw_intf)
+        # addAnnotationToNode(v1, hostname, EXTERNAL_INTF_NAME, ex_gw_intf)
 
         # add external bridge IP
-        addAnnotationToNode(v1, hostname, EXTERNAL_BR_IP, ex_br_ip)
+        # addAnnotationToNode(v1, hostname, EXTERNAL_BR_IP, ex_br_ip)
 
         # [Mod] add external OvS IP
         addAnnotationToNode(v1, hostname, EXTERNAL_OVS_IP, ex_ovs_ip)
